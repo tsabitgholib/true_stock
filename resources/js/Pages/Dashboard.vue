@@ -1,19 +1,28 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-const stats = [
-    { name: 'Total Items', value: '1,234', change: '+12%', changeType: 'increase' },
-    { name: 'Total Warehouses', value: '5', change: '0', changeType: 'neutral' },
-    { name: 'Active Movements (Today)', value: '45', change: '+5%', changeType: 'increase' },
-    { name: 'Low Stock Alerts', value: '12', change: '-2', changeType: 'decrease' },
-];
+const props = defineProps({
+    kpis: Object,
+    valuationByWarehouse: Array
+});
 
-const recentMovements = [
-    { id: 1, item: 'Raw Material A', type: 'STOCK_IN', qty: 100, user: 'Admin', time: '10 mins ago' },
-    { id: 2, item: 'Finished Product B', type: 'STOCK_OUT', qty: 50, user: 'Warehouse Staff', time: '1 hour ago' },
-    { id: 3, item: 'Packaging Material C', type: 'TRANSFER', qty: 200, user: 'Admin', time: '2 hours ago' },
-];
+const stats = computed(() => [
+    { name: 'Total Items', value: props.kpis.total_items, change: 'Master Data', changeType: 'neutral' },
+    { name: 'Inventory Valuation', value: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(props.kpis.total_valuation), change: 'Current Assets', changeType: 'increase' },
+    { name: 'Low Stock Alerts', value: props.kpis.low_stock_count, change: 'Requires Action', changeType: props.kpis.low_stock_count > 0 ? 'decrease' : 'neutral' },
+    { name: 'Total Warehouses', value: props.valuationByWarehouse.length, change: 'Active Sites', changeType: 'neutral' },
+]);
+
+const recentMovements = computed(() => props.kpis.recent_movements.map(m => ({
+    id: m.id,
+    item: m.item.item_name,
+    type: m.movement_type,
+    qty: m.quantity,
+    user: m.user_id, // Could be user name if joined
+    time: new Date(m.created_at).toLocaleString()
+})));
 </script>
 
 <template>
@@ -77,6 +86,18 @@ const recentMovements = [
                             <button class="flex items-center justify-center px-4 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm">
                                 Stock Opname
                             </button>
+                        </div>
+
+                        <div class="mt-8">
+                            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Valuation by Warehouse</h3>
+                            <div class="space-y-3">
+                                <div v-for="wh in valuationByWarehouse" :key="wh.name" class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">{{ wh.name }}</span>
+                                    <span class="text-sm font-bold text-gray-900">
+                                        {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(wh.valuation) }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

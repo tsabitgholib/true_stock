@@ -27,17 +27,18 @@ class GoodsReceiptService
             }
 
             foreach ($grn->details as $detail) {
-                $this->stockService->stockIn([
-                    'item_id' => $detail->item_id,
-                    'warehouse_id' => $grn->warehouse_id,
-                    'location_id' => $detail->location_id,
-                    'rack_id' => $detail->rack_id,
-                    'batch_id' => $detail->batch_id,
-                    'quantity' => $detail->quantity,
-                    'reference_type' => 'GRN',
-                    'reference_id' => $grn->id,
-                    'remarks' => "Received from GRN #{$grn->grn_number}",
-                ]);
+                $this->stockService->stockIn(new \App\Application\Inventory\DTOs\StockMovementData(
+                    item_id: $detail->item_id,
+                    warehouse_id: $grn->warehouse_id,
+                    location_id: $detail->location_id,
+                    rack_id: $detail->rack_id,
+                    batch_id: $detail->batch_id,
+                    quantity: $detail->quantity,
+                    movement_type: 'STOCK_IN',
+                    reference_type: 'GRN',
+                    reference_id: $grn->id,
+                    remarks: "Received from GRN #{$grn->grn_number}",
+                ));
             }
 
             $grn->update(['status' => 'COMPLETED']);

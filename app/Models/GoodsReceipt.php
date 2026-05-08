@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use App\Infrastructure\Traits\Loggable;
+
 class GoodsReceipt extends Model
 {
+    use Loggable;
+
     protected $fillable = ['grn_number', 'vendor_id', 'warehouse_id', 'receive_date', 'status', 'remarks', 'user_id'];
 
     public function details(): HasMany

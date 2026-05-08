@@ -32,5 +32,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Domain\Inventory\Events\StockMovementOccurred::class,
+            \App\Domain\Inventory\Listeners\RecordStockMovement::class
+        );
     }
 }

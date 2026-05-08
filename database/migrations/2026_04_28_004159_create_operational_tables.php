@@ -59,8 +59,12 @@ return new class extends Migration
             $table->string('transfer_number')->unique();
             $table->foreignId('from_warehouse_id')->constrained('warehouses');
             $table->foreignId('to_warehouse_id')->constrained('warehouses');
-            $table->string('status')->default('DRAFT');
+            $table->string('status')->default('PENDING'); // PENDING, IN_TRANSIT, COMPLETED, CANCELLED
             $table->foreignId('user_id')->constrained();
+            $table->foreignId('confirmed_by')->nullable()->constrained('users');
+            $table->timestamp('shipped_at')->nullable();
+            $table->timestamp('received_at')->nullable();
+            $table->text('remarks')->nullable();
             $table->timestamps();
         });
 
@@ -69,6 +73,10 @@ return new class extends Migration
             $table->foreignId('stock_transfer_id')->constrained()->onDelete('cascade');
             $table->foreignId('item_id')->constrained();
             $table->foreignId('batch_id')->nullable()->constrained('stock_batches');
+            $table->foreignId('from_location_id')->nullable()->constrained('warehouse_locations');
+            $table->foreignId('from_rack_id')->nullable()->constrained('warehouse_racks');
+            $table->foreignId('to_location_id')->nullable()->constrained('warehouse_locations');
+            $table->foreignId('to_rack_id')->nullable()->constrained('warehouse_racks');
             $table->decimal('quantity', 16, 4);
             $table->timestamps();
         });

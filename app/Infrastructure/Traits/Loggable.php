@@ -25,16 +25,44 @@ trait Loggable
 
     protected static function logChange($model, $event)
     {
+        $oldValues = null;
+        $newValues = null;
+
+        if ($event === 'updated') {
+            $changed = $model->getDirty();
+            $oldValues = array_intersect_key($model->getOriginal(), $changed);
+            $newValues = $changed;
+
+            // Skip if no actual data changed (e.g., only timestamps)
+            if (empty($newValues) || (count($newValues) === 1 && isset($newValues['updated_at']))) {
+                return;
+            }
+        } elseif ($event === 'created') {
+            $newValues = $model->getAttributes();
+        } elseif ($event === 'deleted') {
+            $oldValues = $model->getOriginal();
+        }
+
+        // Filter out sensitive or excluded fields
+        $exclude = property_exists($model, 'auditExclude') ? $model->auditExclude : ['id', 'created_at', 'updated_at', 'password'];
+        
+        if ($oldValues) {
+            $oldValues = array_diff_key($oldValues, array_flip($exclude));
+        }
+        if ($newValues) {
+            $newValues = array_diff_key($newValues, array_flip($exclude));
+        }
+
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => Auth::id() ?? 1, // Fallback to system/seeder user
             'event' => $event,
             'auditable_type' => get_class($model),
             'auditable_id' => $model->id,
-            'old_values' => $event === 'updated' ? $model->getOriginal() : null,
-            'new_values' => $event !== 'deleted' ? $model->getAttributes() : null,
-            'url' => Request::fullUrl(),
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'url' => Request::hasHeader('host') ? Request::fullUrl() : 'console',
+            'ip_address' => Request::ip() ?? '127.0.0.1',
+            'user_agent' => Request::userAgent() ?? 'console',
         ]);
     }
 }

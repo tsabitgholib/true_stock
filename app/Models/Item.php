@@ -11,7 +11,7 @@ class Item extends Model
     use Loggable;
 
     protected $fillable = [
-        'item_code', 'item_name', 'description', 'item_category_id',
+        'item_code', 'item_name', 'standard_cost', 'description', 'item_category_id',
         'unit_id', 'item_type', 'weight', 'dimension',
         'barcode', 'qr_code', 'reorder_level', 'safety_stock', 'max_stock'
     ];
