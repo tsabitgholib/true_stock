@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('companies', CompanyController::class);
     Route::resource('items', ItemController::class);
+    Route::get('/inventory', [\App\Interfaces\Http\Controllers\InventoryController::class, 'index'])->name('inventory.index');
     
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

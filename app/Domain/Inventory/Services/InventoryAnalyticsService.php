@@ -41,6 +41,41 @@ class InventoryAnalyticsService
     }
 
     /**
+     * Get stock balances with filtering
+     */
+    public function getStockBalances(array $filters = []): \Illuminate\Support\Collection
+    {
+        $query = Stock::with(['item.category', 'item.unit', 'warehouse', 'location', 'rack', 'batch']);
+
+        if (!empty($filters['warehouse_id'])) {
+            $query->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        if (!empty($filters['item_id'])) {
+            $query->where('item_id', $filters['item_id']);
+        }
+
+        $stocks = $query->get();
+
+        // Map to include available stock (Physical - Reserved)
+        return $stocks->map(function ($stock) {
+            $reserved = \App\Models\StockReservation::active()
+                ->where([
+                    'item_id' => $stock->item_id,
+                    'warehouse_id' => $stock->warehouse_id,
+                    'location_id' => $stock->location_id,
+                    'rack_id' => $stock->rack_id,
+                    'batch_id' => $stock->batch_id,
+                ])->sum('quantity');
+
+            $stock->available_quantity = max(0, $stock->quantity - $reserved);
+            $stock->reserved_quantity = $reserved;
+            
+            return $stock;
+        });
+    }
+
+    /**
      * Get stock aging (simplified)
      */
     public function getStockAging(): array

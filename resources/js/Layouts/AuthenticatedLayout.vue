@@ -34,8 +34,11 @@ const showingNavigationDropdown = ref(false);
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <NavLink :href="route('companies.index')" :active="route().current('companies.*')">
-                                    Companies
+                                <NavLink :href="route('inventory.index')" :active="route().current('inventory.*')">
+                                    Inventory
+                                </NavLink>
+                                <NavLink :href="route('items.index')" :active="route().current('items.*')">
+                                    Master Items
                                 </NavLink>
                                 <NavLink :href="route('items.index')" :active="route().current('items.*')">
                                     Items
@@ -147,6 +150,18 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('inventory.index')"
+                            :active="route().current('inventory.*')"
+                        >
+                            Inventory
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('items.index')"
+                            :active="route().current('items.*')"
+                        >
+                            Items
                         </ResponsiveNavLink>
                     </div>
 
