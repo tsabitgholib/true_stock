@@ -6,14 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Infrastructure\Traits\Loggable;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Item extends Model
 {
-    use Loggable;
+    use Loggable, SoftDeletes;
 
     protected $fillable = [
         'item_code', 'item_name', 'standard_cost', 'description', 'item_category_id',
         'unit_id', 'item_type', 'weight', 'dimension',
-        'barcode', 'qr_code', 'reorder_level', 'safety_stock', 'max_stock'
+        'barcode', 'qr_code', 'reorder_level', 'safety_stock', 'max_stock', 'minimum_stock_level'
     ];
 
     public function category(): BelongsTo

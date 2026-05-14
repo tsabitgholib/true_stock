@@ -53,7 +53,7 @@ trait Loggable
             $newValues = array_diff_key($newValues, array_flip($exclude));
         }
 
-        AuditLog::create([
+        \App\Jobs\ProcessAuditLog::dispatch([
             'user_id' => Auth::id() ?? 1, // Fallback to system/seeder user
             'event' => $event,
             'auditable_type' => get_class($model),

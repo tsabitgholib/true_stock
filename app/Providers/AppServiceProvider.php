@@ -37,5 +37,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Inventory\Events\StockMovementOccurred::class,
             \App\Domain\Inventory\Listeners\RecordStockMovement::class
         );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Domain\Inventory\Events\StockMovementOccurred::class,
+            \App\Domain\Inventory\Listeners\ClearDashboardCache::class
+        );
     }
 }

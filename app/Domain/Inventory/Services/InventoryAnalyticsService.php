@@ -14,30 +14,32 @@ class InventoryAnalyticsService
      */
     public function getDashboardKPIs(): array
     {
-        $totalItems = Item::count();
-        $totalValuation = DB::table('stocks')
-            ->join('items', 'stocks.item_id', '=', 'items.id')
-            ->sum(DB::raw('stocks.quantity * items.standard_cost'));
+        return \Illuminate\Support\Facades\Cache::remember('dashboard_kpis', 3600, function () {
+            $totalItems = Item::count();
+            $totalValuation = DB::table('stocks')
+                ->join('items', 'stocks.item_id', '=', 'items.id')
+                ->sum(DB::raw('stocks.quantity * items.standard_cost'));
 
-        $lowStockCount = Item::whereExists(function ($query) {
-            $query->select(DB::raw(1))
-                ->from('stocks')
-                ->whereColumn('stocks.item_id', 'items.id')
-                ->groupBy('item_id')
-                ->having(DB::raw('SUM(quantity)'), '<=', DB::raw('items.reorder_level'));
-        })->count();
+            $lowStockCount = Item::whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('stocks')
+                    ->whereColumn('stocks.item_id', 'items.id')
+                    ->groupBy('item_id')
+                    ->having(DB::raw('SUM(quantity)'), '<=', DB::raw('items.reorder_level'));
+            })->count();
 
-        $recentMovements = StockMovement::with(['item', 'warehouse'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+            $recentMovements = StockMovement::with(['item', 'warehouse'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
 
-        return [
-            'total_items' => $totalItems,
-            'total_valuation' => $totalValuation,
-            'low_stock_count' => $lowStockCount,
-            'recent_movements' => $recentMovements,
-        ];
+            return [
+                'total_items' => $totalItems,
+                'total_valuation' => $totalValuation,
+                'low_stock_count' => $lowStockCount,
+                'recent_movements' => $recentMovements,
+            ];
+        });
     }
 
     /**
@@ -59,18 +61,7 @@ class InventoryAnalyticsService
 
         // Map to include available stock (Physical - Reserved)
         return $stocks->map(function ($stock) {
-            $reserved = \App\Models\StockReservation::active()
-                ->where([
-                    'item_id' => $stock->item_id,
-                    'warehouse_id' => $stock->warehouse_id,
-                    'location_id' => $stock->location_id,
-                    'rack_id' => $stock->rack_id,
-                    'batch_id' => $stock->batch_id,
-                ])->sum('quantity');
-
-            $stock->available_quantity = max(0, $stock->quantity - $reserved);
-            $stock->reserved_quantity = $reserved;
-            
+            $stock->available_quantity = max(0, $stock->quantity - $stock->reserved_quantity);
             return $stock;
         });
     }

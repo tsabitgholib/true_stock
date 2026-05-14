@@ -48,24 +48,19 @@ class StockService
      */
     public function getAvailableStock(int $itemId, int $warehouseId, ?int $locationId = null, ?int $rackId = null, ?int $batchId = null): float
     {
-        $physicalStock = Stock::where([
+        $stock = Stock::where([
             'item_id' => $itemId,
             'warehouse_id' => $warehouseId,
             'location_id' => $locationId,
             'rack_id' => $rackId,
             'batch_id' => $batchId,
-        ])->value('quantity') ?? 0;
+        ])->first();
 
-        $reservedStock = \App\Models\StockReservation::active()
-            ->where([
-                'item_id' => $itemId,
-                'warehouse_id' => $warehouseId,
-                'location_id' => $locationId,
-                'rack_id' => $rackId,
-                'batch_id' => $batchId,
-            ])->sum('quantity');
+        if (!$stock) {
+            return 0;
+        }
 
-        return max(0, $physicalStock - $reservedStock);
+        return max(0, $stock->quantity - $stock->reserved_quantity);
     }
 
     /**
@@ -121,19 +116,25 @@ class StockService
     public function reserveStock(array $rawData): \App\Models\StockReservation
     {
         return DB::transaction(function () use ($rawData) {
-            $available = $this->getAvailableStock(
-                $rawData['item_id'],
-                $rawData['warehouse_id'],
-                $rawData['location_id'] ?? null,
-                $rawData['rack_id'] ?? null,
-                $rawData['batch_id'] ?? null
-            );
+            $stock = Stock::where([
+                'item_id' => $rawData['item_id'],
+                'warehouse_id' => $rawData['warehouse_id'],
+                'location_id' => $rawData['location_id'] ?? null,
+                'rack_id' => $rawData['rack_id'] ?? null,
+                'batch_id' => $rawData['batch_id'] ?? null,
+            ])->lockForUpdate()->first();
+
+            if (!$stock) {
+                 throw new \Exception("Stock record not found for reservation.");
+            }
+
+            $available = $stock->quantity - $stock->reserved_quantity;
 
             if ($available < $rawData['quantity']) {
                 throw new \Exception("Insufficient stock to reserve. Available: {$available}");
             }
 
-            return \App\Models\StockReservation::create([
+            $reservation = \App\Models\StockReservation::create([
                 'reservation_number' => 'RES-' . strtoupper(uniqid()),
                 'item_id' => $rawData['item_id'],
                 'warehouse_id' => $rawData['warehouse_id'],
@@ -147,6 +148,10 @@ class StockService
                 'expires_at' => $rawData['expires_at'] ?? now()->addDays(3),
                 'user_id' => Auth::id() ?? 1,
             ]);
+
+            $stock->increment('reserved_quantity', $rawData['quantity']);
+
+            return $reservation;
         });
     }
 
@@ -155,8 +160,27 @@ class StockService
      */
     public function releaseReservation(int $reservationId, string $status = 'CANCELLED'): void
     {
-        $reservation = \App\Models\StockReservation::findOrFail($reservationId);
-        $reservation->update(['status' => $status]);
+        DB::transaction(function () use ($reservationId, $status) {
+            $reservation = \App\Models\StockReservation::lockForUpdate()->findOrFail($reservationId);
+
+            if ($reservation->status !== 'ACTIVE') {
+                return; // Already released or completed
+            }
+
+            $stock = Stock::where([
+                'item_id' => $reservation->item_id,
+                'warehouse_id' => $reservation->warehouse_id,
+                'location_id' => $reservation->location_id,
+                'rack_id' => $reservation->rack_id,
+                'batch_id' => $reservation->batch_id,
+            ])->lockForUpdate()->first();
+
+            if ($stock) {
+                $stock->decrement('reserved_quantity', $reservation->quantity);
+            }
+
+            $reservation->update(['status' => $status]);
+        });
     }
 
     /**
